@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:latest
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mydatabase
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "5000:5000"
+    container_name: my_flask_app
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/mydatabase
+    depends_on:
+      db:
+        condition: service_healthy  # Wait for the db to be healthy
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    container_name: my_frontend_app
+
+volumes:
+  db_data:
